@@ -37,12 +37,6 @@ jobs:
           include(":app")
           EOF
 
-          cat > build.gradle <<'EOF'
-          plugins {
-              id 'com.android.application' version '8.7.3' apply false
-          }
-          EOF
-
           cat > app/build.gradle <<'EOF'
           plugins {
               id 'com.android.application'
@@ -58,6 +52,12 @@ jobs:
                   targetSdk 35
                   versionCode 1
                   versionName '1.0'
+              }
+
+              buildTypes {
+                  debug {
+                      debuggable true
+                  }
               }
           }
           EOF
@@ -286,7 +286,7 @@ jobs:
           EOF
 
           gradle wrapper --gradle-version 8.9
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
       - name: Find APK
         run: |
