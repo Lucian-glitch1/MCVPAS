@@ -289,7 +289,7 @@ jobs:
           ./gradlew assembleRelease
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: MCVPAS-Android-APK
-          path: MCVPAS/app/build/outputs/apk/release/app-release.apk
+  uses: actions/upload-artifact@v4
+  with:
+    name: MCVPAS-Android-APK
+    path: app/build/outputs/apk/release/app-release.apk
