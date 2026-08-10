@@ -285,7 +285,7 @@ jobs:
           }
           EOF
 
-          cd MCVPAS
+          
           gradle wrapper --gradle-version 8.9
           ./gradlew assembleRelease
 
