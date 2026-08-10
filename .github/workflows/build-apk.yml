@@ -1,5 +1,3 @@
-# .github/workflows/build-apk.yml
-
 name: Build MCVPAS Android APK
 
 on:
