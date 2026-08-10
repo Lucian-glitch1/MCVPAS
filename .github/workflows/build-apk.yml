@@ -285,7 +285,6 @@ jobs:
           }
           EOF
 
-          
           gradle wrapper --gradle-version 8.9
           ./gradlew assembleRelease
 
