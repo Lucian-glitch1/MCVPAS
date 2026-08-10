@@ -296,4 +296,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: MCVPAS-Android-APK
-          path: MCVPAS/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: MCVPAS/app/build/outputs/apk/debug/app-debug.apk
