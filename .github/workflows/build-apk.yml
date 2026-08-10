@@ -286,7 +286,7 @@ jobs:
           EOF
 
           gradle wrapper --gradle-version 8.9
-          ./gradlew assembleDebug
+          ./gradlew assembleDebug --stacktrace
 
       - name: Find APK
         run: |
