@@ -11,24 +11,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-35"
+          sdkmanager "build-tools;35.0.0"
 
       - name: Create Android project
         run: |
-          mkdir -p MCVPAS/app/src/main/java/com/mcvpas
-          mkdir -p MCVPAS/app/src/main/res/values
-
-          cd MCVPAS
+          mkdir -p app/src/main/java/com/mcvpas
+          mkdir -p app/src/main/res/values
 
           cat > settings.gradle <<'EOF'
           pluginManagement {
@@ -40,9 +44,7 @@ jobs:
           }
 
           dependencyResolutionManagement {
-              repositoriesMode.set(
-                  org.gradle.api.initialization.resolve.RepositoriesMode.FAIL_ON_PROJECT_REPOS
-              )
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
 
               repositories {
                   google()
@@ -89,7 +91,20 @@ jobs:
           }
           EOF
 
+          cat > app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme"
+                  parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:colorAccent">#3949AB</item>
+                  <item name="android:statusBarColor">#1A237E</item>
+              </style>
+          </resources>
+          EOF
+
           cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
               <application
@@ -100,8 +115,7 @@ jobs:
 
                   <activity
                       android:name=".MainActivity"
-                      android:exported="true"
-                      android:screenOrientation="portrait">
+                      android:exported="true">
 
                       <intent-filter>
                           <action android:name="android.intent.action.MAIN" />
@@ -115,37 +129,14 @@ jobs:
           </manifest>
           EOF
 
-          cat > app/src/main/res/values/styles.xml <<'EOF'
-          <resources>
-
-              <style
-                  name="AppTheme"
-                  parent="android:style/Theme.Material.Light.NoActionBar">
-
-                  <item name="android:fontFamily">sans</item>
-                  <item name="android:colorAccent">#3949AB</item>
-                  <item name="android:navigationBarColor">#000000</item>
-                  <item name="android:statusBarColor">#1A237E</item>
-                  <item name="android:windowLightStatusBar">false</item>
-
-              </style>
-
-          </resources>
-          EOF
-
           cat > app/src/main/java/com/mcvpas/MainActivity.java <<'EOF'
           package com.mcvpas;
 
           import android.app.Activity;
           import android.os.Bundle;
           import android.graphics.Color;
-          import android.content.Intent;
-          import android.net.Uri;
-          import android.provider.MediaStore;
           import android.view.Gravity;
-          import android.view.View;
           import android.widget.Button;
-          import android.widget.EditText;
           import android.widget.LinearLayout;
           import android.widget.ScrollView;
           import android.widget.TextView;
@@ -155,435 +146,123 @@ jobs:
 
               private LinearLayout layout;
 
-              private int BLUE = Color.rgb(26, 35, 126);
-              private int DARK = Color.rgb(25, 35, 70);
-              private int GRAY = Color.rgb(90, 90, 90);
-
               @Override
               protected void onCreate(Bundle savedInstanceState) {
                   super.onCreate(savedInstanceState);
-                  showHome();
+                  showDashboard();
               }
 
-              private TextView text(String value, float size) {
-                  TextView t = new TextView(this);
-                  t.setText(value);
-                  t.setTextSize(size);
-                  t.setTextColor(DARK);
-                  t.setPadding(8, 12, 8, 12);
-                  return t;
+              private TextView title(String text) {
+                  TextView view = new TextView(this);
+                  view.setText(text);
+                  view.setTextSize(28);
+                  view.setTextColor(Color.rgb(26, 35, 126));
+                  view.setGravity(Gravity.CENTER);
+                  view.setPadding(10, 20, 10, 20);
+                  return view;
               }
 
-              private TextView heading(String value) {
-                  TextView t = text(value, 25);
-                  t.setTextColor(BLUE);
-                  t.setTypeface(null, android.graphics.Typeface.BOLD);
-                  return t;
+              private Button button(String text) {
+                  Button button = new Button(this);
+                  button.setText(text);
+                  button.setAllCaps(false);
+                  return button;
               }
 
-              private Button button(String value) {
-                  Button b = new Button(this);
-                  b.setText(value);
-                  b.setTextSize(15);
-                  b.setAllCaps(false);
-
-                  LinearLayout.LayoutParams params =
-                          new LinearLayout.LayoutParams(
-                                  LinearLayout.LayoutParams.MATCH_PARENT,
-                                  LinearLayout.LayoutParams.WRAP_CONTENT
-                          );
-
-                  params.setMargins(0, 8, 0, 8);
-                  b.setLayoutParams(params);
-
-                  return b;
-              }
-
-              private EditText input(String hint) {
-                  EditText e = new EditText(this);
-                  e.setHint(hint);
-                  e.setTextSize(16);
-                  e.setPadding(12, 10, 12, 10);
-
-                  LinearLayout.LayoutParams params =
-                          new LinearLayout.LayoutParams(
-                                  LinearLayout.LayoutParams.MATCH_PARENT,
-                                  LinearLayout.LayoutParams.WRAP_CONTENT
-                          );
-
-                  params.setMargins(0, 5, 0, 5);
-                  e.setLayoutParams(params);
-
-                  return e;
-              }
-
-              private void base(String title) {
+              private void showDashboard() {
 
                   ScrollView scroll = new ScrollView(this);
 
                   layout = new LinearLayout(this);
                   layout.setOrientation(LinearLayout.VERTICAL);
-                  layout.setPadding(24, 20, 24, 24);
+                  layout.setPadding(25, 20, 25, 20);
 
                   scroll.addView(layout);
-
                   setContentView(scroll);
 
-                  TextView appTitle = text("MCVPAS", 32);
-                  appTitle.setTextColor(BLUE);
-                  appTitle.setTypeface(null, android.graphics.Typeface.BOLD);
-                  appTitle.setGravity(Gravity.CENTER);
+                  layout.addView(title("MCVPAS"));
 
-                  layout.addView(appTitle);
-
-                  TextView subtitle =
-                          text("Smart Missing Child and Vulnerable Person Alert System", 15);
-
-                  subtitle.setGravity(Gravity.CENTER);
-                  subtitle.setTextColor(GRAY);
-
-                  layout.addView(subtitle);
-
-                  layout.addView(heading(title));
-              }
-
-              private void backButton() {
-                  Button back = button("← Back to Dashboard");
-                  back.setOnClickListener(v -> showHome());
-                  layout.addView(back);
-              }
-
-              private void showHome() {
-
-                  base("Dashboard");
-
-                  layout.addView(text(
-                          "Welcome to MCVPAS\n\n" +
-                          "A prototype system designed to support the reporting, " +
-                          "sharing, and monitoring of missing children and vulnerable persons.",
-                          17
-                  ));
-
-                  layout.addView(text(
-                          "ACTIVE CASES: 2\n" +
-                          "RECENT SIGHTINGS: 3\n" +
-                          "PENDING REPORTS: 5",
-                          18
-                  ));
-
-                  Button report = button("🚨 Report Missing Person");
-                  report.setOnClickListener(v -> showReport());
-                  layout.addView(report);
-
-                  Button cases = button("🔎 View Active Cases");
-                  cases.setOnClickListener(v -> showCases());
-                  layout.addView(cases);
-
-                  Button sighting = button("📍 Submit a Sighting");
-                  sighting.setOnClickListener(v -> showSighting());
-                  layout.addView(sighting);
-
-                  Button alerts = button("🔔 Alerts");
-                  alerts.setOnClickListener(v -> showAlerts());
-                  layout.addView(alerts);
-
-                  Button ai = button("🤖 AI-Assisted Photo Matching");
-                  ai.setOnClickListener(v -> showAI());
-                  layout.addView(ai);
-
-                  layout.addView(text(
-                          "\nPrototype Notice:\n" +
-                          "This application is a school/project prototype. " +
-                          "Reports should be verified by authorized personnel. " +
-                          "The system does not replace official investigations.",
-                          13
-                  ));
-              }
-
-              private void showReport() {
-
-                  base("Report Missing Person");
-
-                  EditText name = input("Name / Case Identifier");
-                  layout.addView(name);
-
-                  EditText age = input("Age");
-                  age.setInputType(
-                          android.text.InputType.TYPE_CLASS_NUMBER
+                  TextView description = new TextView(this);
+                  description.setText(
+                      "Smart Missing Child and Vulnerable Person Alert System"
                   );
-                  layout.addView(age);
-
-                  EditText location = input("Last Known Location");
-                  layout.addView(location);
-
-                  EditText description =
-                          input("Description / Important Details");
-                  description.setMinLines(4);
-                  description.setGravity(Gravity.TOP);
+                  description.setTextSize(16);
+                  description.setGravity(Gravity.CENTER);
                   layout.addView(description);
 
-                  Button photo = button("📷 Select Photo");
+                  layout.addView(button("Report Missing Person"));
+                  layout.addView(button("View Active Cases"));
+                  layout.addView(button("Submit a Sighting"));
+                  layout.addView(button("Alerts"));
+                  layout.addView(button("AI-Assisted Photo Matching"));
 
-                  photo.setOnClickListener(v -> {
-
-                      Intent intent =
-                              new Intent(
-                                      Intent.ACTION_PICK,
-                                      MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                              );
-
-                      startActivityForResult(intent, 100);
-                  });
-
-                  layout.addView(photo);
-
-                  Button submit = button("Submit Missing-Person Report");
-
-                  submit.setOnClickListener(v -> {
-
-                      if (name.getText().toString().trim().isEmpty() ||
-                          location.getText().toString().trim().isEmpty()) {
-
-                          Toast.makeText(
-                                  this,
-                                  "Please enter the name and last known location.",
-                                  Toast.LENGTH_LONG
-                          ).show();
-
-                          return;
-                      }
-
+                  Button report = (Button) layout.getChildAt(2);
+                  report.setOnClickListener(v ->
                       Toast.makeText(
-                              this,
-                              "Report submitted for administrator verification.",
-                              Toast.LENGTH_LONG
-                      ).show();
-                  });
-
-                  layout.addView(submit);
-
-                  backButton();
-              }
-
-              private void showCases() {
-
-                  base("Active Cases");
-
-                  layout.addView(text(
-                          "CASE #001\n\n" +
-                          "Type: Missing Child\n" +
-                          "Location: Angeles City\n" +
-                          "Status: ACTIVE\n\n" +
-                          "Last reported location: Angeles City",
-                          17
-                  ));
-
-                  layout.addView(text(
-                          "--------------------------------",
-                          14
-                  ));
-
-                  layout.addView(text(
-                          "CASE #002\n\n" +
-                          "Type: Vulnerable Person\n" +
-                          "Location: Mabalacat City\n" +
-                          "Status: ACTIVE\n\n" +
-                          "Last reported location: Mabalacat City",
-                          17
-                  ));
-
-                  backButton();
-              }
-
-              private void showSighting() {
-
-                  base("Submit a Sighting");
-
-                  EditText caseId = input("Case Number");
-                  layout.addView(caseId);
-
-                  EditText location = input("Sighting Location");
-                  layout.addView(location);
-
-                  EditText details =
-                          input("What did you observe?");
-                  details.setMinLines(5);
-                  details.setGravity(Gravity.TOP);
-                  layout.addView(details);
-
-                  Button photo = button("📷 Attach Photo");
-
-                  photo.setOnClickListener(v -> {
-
-                      Intent intent =
-                              new Intent(
-                                      Intent.ACTION_PICK,
-                                      MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                              );
-
-                      startActivityForResult(intent, 101);
-                  });
-
-                  layout.addView(photo);
-
-                  Button submit = button("Submit Sighting");
-
-                  submit.setOnClickListener(v -> {
-
-                      if (location.getText().toString().trim().isEmpty()) {
-
-                          Toast.makeText(
-                                  this,
-                                  "Please enter the sighting location.",
-                                  Toast.LENGTH_LONG
-                          ).show();
-
-                          return;
-                      }
-
-                      Toast.makeText(
-                              this,
-                              "Sighting submitted for administrator review.",
-                              Toast.LENGTH_LONG
-                      ).show();
-                  });
-
-                  layout.addView(submit);
-
-                  backButton();
-              }
-
-              private void showAlerts() {
-
-                  base("Alerts");
-
-                  layout.addView(text(
-                          "⚠ ACTIVE MISSING-PERSON ALERT\n\n" +
-                          "Case #001\n" +
-                          "Location: Angeles City\n" +
-                          "Status: ACTIVE",
-                          18
-                  ));
-
-                  layout.addView(text(
-                          "--------------------------------",
-                          14
-                  ));
-
-                  layout.addView(text(
-                          "📍 NEW SIGHTING\n\n" +
-                          "Case #002\n" +
-                          "Location: Mabalacat City\n" +
-                          "Status: UNDER REVIEW",
-                          18
-                  ));
-
-                  layout.addView(text(
-                          "\nOnly authorized personnel should verify " +
-                          "and act on reports.",
-                          14
-                  ));
-
-                  backButton();
-              }
-
-              private void showAI() {
-
-                  base("AI-Assisted Photo Matching");
-
-                  layout.addView(text(
-                          "AI PHOTO MATCHING PROTOTYPE\n\n" +
-                          "This module demonstrates where an AI-assisted " +
-                          "photo comparison feature could be placed in the " +
-                          "MCVPAS system.\n\n" +
-                          "The current version does NOT perform real facial " +
-                          "recognition or identity verification.",
-                          17
-                  ));
-
-                  Button select = button("📷 Select Photo");
-
-                  select.setOnClickListener(v -> {
-
-                      Intent intent =
-                              new Intent(
-                                      Intent.ACTION_PICK,
-                                      MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                              );
-
-                      startActivityForResult(intent, 102);
-                  });
-
-                  layout.addView(select);
-
-                  Button analyze =
-                          button("🔎 Start Prototype Matching");
-
-                  analyze.setOnClickListener(v -> {
-
-                      Toast.makeText(
-                              this,
-                              "Prototype analysis complete. " +
-                              "No identity was verified.",
-                              Toast.LENGTH_LONG
-                      ).show();
-                  });
-
-                  layout.addView(analyze);
-
-                  layout.addView(text(
-                          "\nSafety and privacy:\n" +
-                          "Photo matching should only be implemented " +
-                          "with proper authorization, privacy safeguards, " +
-                          "and human verification.",
-                          14
-                  ));
-
-                  backButton();
-              }
-
-              @Override
-              protected void onActivityResult(
-                      int requestCode,
-                      int resultCode,
-                      Intent data) {
-
-                  super.onActivityResult(
-                          requestCode,
-                          resultCode,
-                          data
+                          this,
+                          "Report Missing Person selected",
+                          Toast.LENGTH_SHORT
+                      ).show()
                   );
 
-                  if (resultCode == RESULT_OK && data != null) {
-
-                      Uri imageUri = data.getData();
-
+                  Button cases = (Button) layout.getChildAt(3);
+                  cases.setOnClickListener(v ->
                       Toast.makeText(
-                              this,
-                              "Photo selected successfully.",
-                              Toast.LENGTH_SHORT
-                      ).show();
-                  }
+                          this,
+                          "Active Cases selected",
+                          Toast.LENGTH_SHORT
+                      ).show()
+                  );
+
+                  Button sighting = (Button) layout.getChildAt(4);
+                  sighting.setOnClickListener(v ->
+                      Toast.makeText(
+                          this,
+                          "Submit a Sighting selected",
+                          Toast.LENGTH_SHORT
+                      ).show()
+                  );
+
+                  Button alerts = (Button) layout.getChildAt(5);
+                  alerts.setOnClickListener(v ->
+                      Toast.makeText(
+                          this,
+                          "Alerts selected",
+                          Toast.LENGTH_SHORT
+                      ).show()
+                  );
+
+                  Button ai = (Button) layout.getChildAt(6);
+                  ai.setOnClickListener(v ->
+                      Toast.makeText(
+                          this,
+                          "AI Photo Matching prototype",
+                          Toast.LENGTH_SHORT
+                      ).show()
+                  );
               }
           }
           EOF
 
-          gradle wrapper --gradle-version 8.9
-
-      - name: Build Debug APK
-        working-directory: MCVPAS
+      - name: Install Gradle
         run: |
-          chmod +x gradlew
-          ./gradlew clean assembleDebug --stacktrace
+          wget -q https://services.gradle.org/distributions/gradle-8.9-bin.zip
+          unzip -q gradle-8.9-bin.zip
+          echo "$PWD/gradle-8.9/bin" >> $GITHUB_PATH
 
-      - name: Verify APK
+      - name: Build APK
         run: |
-          ls -lh MCVPAS/app/build/outputs/apk/debug/app-debug.apk
-          file MCVPAS/app/build/outputs/apk/debug/app-debug.apk
+          gradle clean assembleDebug --stacktrace
+
+      - name: Check APK
+        run: |
+          ls -lh app/build/outputs/apk/debug/app-debug.apk
+          file app/build/outputs/apk/debug/app-debug.apk
+          unzip -t app/build/outputs/apk/debug/app-debug.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: MCVPAS-Android-APK
-          path: MCVPAS/app/build/outputs/apk/debug/app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
