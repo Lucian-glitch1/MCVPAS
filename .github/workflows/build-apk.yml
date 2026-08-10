@@ -1,0 +1,296 @@
+name: Build MCVPAS Android APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create Android project
+        run: |
+          mkdir -p MCVPAS/app/src/main/java/com/mcvpas
+          mkdir -p MCVPAS/app/src/main/res/values
+          cd MCVPAS
+
+          cat > settings.gradle <<'EOF'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = "MCVPAS"
+          include(":app")
+          EOF
+
+          cat > build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application' version '8.7.3' apply false
+          }
+          EOF
+
+          cat > app/build.gradle <<'EOF'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.mcvpas'
+              compileSdk 35
+
+              defaultConfig {
+                  applicationId 'com.mcvpas'
+                  minSdk 23
+                  targetSdk 35
+                  versionCode 1
+                  versionName '1.0'
+              }
+          }
+          EOF
+
+          cat > app/src/main/AndroidManifest.xml <<'EOF'
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <application
+                  android:theme="@style/AppTheme"
+                  android:label="MCVPAS"
+                  android:allowBackup="false">
+                  <activity
+                      android:name=".MainActivity"
+                      android:screenOrientation="portrait"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN"/>
+                          <category android:name="android.intent.category.LAUNCHER"/>
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat > app/src/main/res/values/styles.xml <<'EOF'
+          <resources>
+              <style name="AppTheme" parent="android:style/Theme.Material.Light.NoActionBar">
+                  <item name="android:fontFamily">sans</item>
+                  <item name="android:colorAccent">#3949AB</item>
+                  <item name="android:navigationBarColor">#000000</item>
+              </style>
+          </resources>
+          EOF
+
+          cat > app/src/main/java/com/mcvpas/MainActivity.java <<'EOF'
+          package com.mcvpas;
+
+          import android.app.*;
+          import android.os.*;
+          import android.graphics.Color;
+          import android.content.*;
+          import android.view.*;
+          import android.widget.*;
+
+          public class MainActivity extends Activity {
+
+              LinearLayout layout;
+
+              TextView title(String text, int size) {
+                  TextView t = new TextView(this);
+                  t.setText(text);
+                  t.setTextSize(size);
+                  t.setTextColor(Color.rgb(25, 35, 70));
+                  t.setPadding(8, 18, 8, 12);
+                  return t;
+              }
+
+              Button button(String text) {
+                  Button b = new Button(this);
+                  b.setText(text);
+                  b.setTextSize(15);
+                  return b;
+              }
+
+              @Override
+              public void onCreate(Bundle saved) {
+                  super.onCreate(saved);
+                  showHome();
+              }
+
+              void base() {
+                  ScrollView scroll = new ScrollView(this);
+                  layout = new LinearLayout(this);
+                  layout.setOrientation(LinearLayout.VERTICAL);
+                  layout.setPadding(28, 25, 28, 25);
+                  scroll.addView(layout);
+                  setContentView(scroll);
+              }
+
+              void showHome() {
+                  base();
+
+                  layout.addView(title("MCVPAS", 32));
+                  layout.addView(title(
+                      "Missing Child and Vulnerable Person Alert System", 17));
+
+                  TextView demo = new TextView(this);
+                  demo.setText("ANDROID DEFENSE PROTOTYPE");
+                  demo.setTextSize(13);
+                  demo.setTextColor(Color.DKGRAY);
+                  layout.addView(demo);
+
+                  layout.addView(title("Dashboard", 24));
+
+                  layout.addView(title("Active Cases: 2", 18));
+                  layout.addView(title("Recent Sightings: 3", 18));
+                  layout.addView(title("Pending Reports: 5", 18));
+
+                  Button report = button("🚨 Report Missing Person");
+                  report.setOnClickListener(v -> showReport());
+                  layout.addView(report);
+
+                  Button cases = button("🔎 View Active Cases");
+                  cases.setOnClickListener(v -> showCases());
+                  layout.addView(cases);
+
+                  Button sighting = button("📍 Submit a Sighting");
+                  sighting.setOnClickListener(v -> showSighting());
+                  layout.addView(sighting);
+
+                  Button alerts = button("🔔 Alerts");
+                  alerts.setOnClickListener(v -> showAlerts());
+                  layout.addView(alerts);
+
+                  Button ai = button("🤖 AI-Assisted Photo Matching");
+                  ai.setOnClickListener(v -> showAI());
+                  layout.addView(ai);
+
+                  layout.addView(title(
+                      "Note: This prototype supports reporting and information sharing. It does not replace official investigation or guarantee recovery.",
+                      13));
+              }
+
+              void back() {
+                  Button b = button("← Back to Dashboard");
+                  b.setOnClickListener(v -> showHome());
+                  layout.addView(b);
+              }
+
+              void showReport() {
+                  base();
+                  layout.addView(title("Report Missing Person", 26));
+
+                  EditText name = new EditText(this);
+                  name.setHint("Name / Case Identifier");
+                  layout.addView(name);
+
+                  EditText location = new EditText(this);
+                  location.setHint("Last Known Location");
+                  layout.addView(location);
+
+                  EditText description = new EditText(this);
+                  description.setHint("Description / Important Details");
+                  description.setMinLines(4);
+                  layout.addView(description);
+
+                  layout.addView(button("📷 Upload / Capture Photo"));
+
+                  Button submit = button("Submit Report");
+                  submit.setOnClickListener(v ->
+                      Toast.makeText(this,
+                          "Report submitted for administrator verification.",
+                          Toast.LENGTH_LONG).show());
+                  layout.addView(submit);
+
+                  back();
+              }
+
+              void showCases() {
+                  base();
+                  layout.addView(title("Active Cases", 26));
+
+                  layout.addView(title(
+                      "Sample Case 001\nMissing Child\nAngeles City\nStatus: ACTIVE", 18));
+
+                  layout.addView(title(
+                      "Sample Case 002\nVulnerable Person\nMabalacat City\nStatus: ACTIVE", 18));
+
+                  back();
+              }
+
+              void showSighting() {
+                  base();
+                  layout.addView(title("Submit a Sighting", 26));
+
+                  EditText loc = new EditText(this);
+                  loc.setHint("Sighting Location");
+                  layout.addView(loc);
+
+                  EditText details = new EditText(this);
+                  details.setHint("What did you observe?");
+                  details.setMinLines(5);
+                  layout.addView(details);
+
+                  Button submit = button("Submit Sighting");
+                  submit.setOnClickListener(v ->
+                      Toast.makeText(this,
+                          "Sighting submitted for administrator review.",
+                          Toast.LENGTH_LONG).show());
+                  layout.addView(submit);
+
+                  back();
+              }
+
+              void showAlerts() {
+                  base();
+                  layout.addView(title("Alerts & Sightings", 26));
+
+                  layout.addView(title(
+                      "⚠ Active Missing-Person Alert\nSample Case 001 • Angeles City",
+                      18));
+
+                  layout.addView(title(
+                      "📍 New Sighting Reported\nSample Case 002 • Mabalacat City",
+                      18));
+
+                  back();
+              }
+
+              void showAI() {
+                  base();
+                  layout.addView(title("AI-Assisted Photo Matching", 26));
+
+                  layout.addView(title(
+                      "Prototype demonstration module\n\n"
+                      + "This feature represents the proposed use of AI-assisted "
+                      + "photo comparison for authorized missing-person cases.\n\n"
+                      + "It should not be presented as guaranteed identity recognition.",
+                      17));
+
+                  layout.addView(button("📷 Select Photo"));
+                  layout.addView(button("🔎 Start Prototype Matching"));
+
+                  back();
+              }
+          }
+          EOF
+
+          cd MCVPAS
+          gradle wrapper --gradle-version 8.9
+          ./gradlew assembleRelease
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: MCVPAS-Android-APK
+          path: MCVPAS/app/build/outputs/apk/release/app-release.apk
