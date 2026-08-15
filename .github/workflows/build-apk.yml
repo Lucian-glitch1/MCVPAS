@@ -26,9 +26,7 @@ jobs:
       - name: Install Android SDK
         run: |
           yes | sdkmanager --licenses > /dev/null || true
-          sdkmanager "platform-tools" \
-            "platforms;android-35" \
-            "build-tools;35.0.0"
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Create Android project
         run: |
@@ -76,19 +74,18 @@ jobs:
                   applicationId 'com.mcvpas'
                   minSdk 23
                   targetSdk 35
-                  versionCode 3
-                  versionName '3.0'
+                  versionCode 2
+                  versionName '2.0'
               }
           }
           EOF
 
           cat > app/src/main/res/values/colors.xml <<'EOF'
           <resources>
-              <color name="navy">#182A5A</color>
-              <color name="blue">#2F5BEA</color>
+              <color name="primary">#263A91</color>
+              <color name="primary_dark">#17235D</color>
+              <color name="accent">#D32F2F</color>
               <color name="background">#F5F7FB</color>
-              <color name="white">#FFFFFF</color>
-              <color name="text">#172033</color>
           </resources>
           EOF
 
@@ -97,9 +94,10 @@ jobs:
               <style name="AppTheme"
                   parent="android:style/Theme.Material.Light.NoActionBar">
                   <item name="android:fontFamily">sans</item>
-                  <item name="android:statusBarColor">@color/navy</item>
-                  <item name="android:navigationBarColor">@color/navy</item>
-                  <item name="android:colorAccent">@color/blue</item>
+                  <item name="android:colorAccent">@color/primary</item>
+                  <item name="android:navigationBarColor">@android:color/white</item>
+                  <item name="android:statusBarColor">@color/primary_dark</item>
+                  <item name="android:windowLightStatusBar">false</item>
               </style>
           </resources>
           EOF
@@ -112,33 +110,34 @@ jobs:
               android:viewportHeight="108">
 
               <path
-                  android:fillColor="#2F5BEA"
-                  android:pathData="M54,4A50,50 0,1 0,54 104A50,50 0,1 0,54 4"/>
+                  android:fillColor="#263A91"
+                  android:pathData="M0,0 L108,0 L108,108 L0,108 Z"/>
 
               <path
                   android:fillColor="#FFFFFF"
-                  android:pathData="M54,18L60,39L82,39L64,52L71,75L54,62L37,75L44,52L26,39L48,39Z"/>
+                  android:pathData="M54,20 A34,34 0,1 0,54 88 A34,34 0,1 0,54 20"/>
+
+              <path
+                  android:fillColor="#263A91"
+                  android:pathData="M54,31 A23,23 0,1 0,54 77 A23,23 0,1 0,54 31"/>
+
+              <path
+                  android:fillColor="#FFFFFF"
+                  android:pathData="M43,43 L65,43 L65,65 L43,65 Z"/>
           </vector>
           EOF
 
           cat > app/src/main/AndroidManifest.xml <<'EOF'
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-              <uses-permission
-                  android:name="android.permission.ACCESS_FINE_LOCATION"/>
-
-              <uses-permission
-                  android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-
               <application
-                  android:theme="@style/AppTheme"
-                  android:label="MCVPAS"
+                  android:allowBackup="false"
                   android:icon="@drawable/ic_launcher"
-                  android:allowBackup="false">
+                  android:label="MCVPAS"
+                  android:theme="@style/AppTheme">
 
                   <activity
                       android:name=".MainActivity"
-                      android:screenOrientation="portrait"
                       android:exported="true">
 
                       <intent-filter>
@@ -156,76 +155,125 @@ jobs:
           cat > app/src/main/java/com/mcvpas/MainActivity.java <<'EOF'
           package com.mcvpas;
 
-          import android.Manifest;
           import android.app.Activity;
           import android.os.Bundle;
           import android.os.Handler;
           import android.content.Intent;
           import android.content.SharedPreferences;
-          import android.content.pm.PackageManager;
           import android.graphics.Color;
           import android.graphics.Typeface;
-          import android.graphics.drawable.GradientDrawable;
-          import android.location.Location;
-          import android.location.LocationManager;
+          import android.net.Uri;
           import android.view.Gravity;
+          import android.view.View;
           import android.widget.*;
 
           import java.text.SimpleDateFormat;
-          import java.util.Date;
           import java.util.Locale;
+          import java.util.Date;
 
           public class MainActivity extends Activity {
 
-              LinearLayout content;
-              SharedPreferences db;
-              LocationManager locationManager;
-              EditText locationField;
+              LinearLayout root;
+              SharedPreferences prefs;
 
-              int NAVY = Color.rgb(24,42,90);
-              int BLUE = Color.rgb(47,91,234);
-              int BG = Color.rgb(245,247,251);
-              int TEXT = Color.rgb(23,32,51);
-              int MUTED = Color.rgb(100,110,130);
+              final int BLUE = Color.rgb(38, 58, 145);
+              final int RED = Color.rgb(211, 47, 47);
+              final int DARK = Color.rgb(35, 35, 45);
 
               @Override
-              public void onCreate(Bundle b) {
-                  super.onCreate(b);
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
 
-                  db = getSharedPreferences("mcvpas", MODE_PRIVATE);
-                  locationManager =
-                      (LocationManager)getSystemService(LOCATION_SERVICE);
+                  prefs = getSharedPreferences("MCVPAS_DATA", MODE_PRIVATE);
 
-                  cover();
+                  if (!prefs.getBoolean("initialized", false)) {
+                      initializeDemoData();
+                  }
+
+                  splash();
               }
 
-              TextView txt(String s,float size,int color) {
+              void splash() {
+                  LinearLayout box = new LinearLayout(this);
+                  box.setOrientation(LinearLayout.VERTICAL);
+                  box.setGravity(Gravity.CENTER);
+                  box.setBackgroundColor(BLUE);
+
+                  TextView logo = new TextView(this);
+                  logo.setText("MCVPAS");
+                  logo.setTextColor(Color.WHITE);
+                  logo.setTextSize(42);
+                  logo.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+                  logo.setGravity(Gravity.CENTER);
+
+                  TextView sub = new TextView(this);
+                  sub.setText(
+                      "Smart Missing Child and\n" +
+                      "Vulnerable Person Alert System"
+                  );
+                  sub.setTextColor(Color.WHITE);
+                  sub.setTextSize(16);
+                  sub.setGravity(Gravity.CENTER);
+                  sub.setPadding(20, 10, 20, 0);
+
+                  box.addView(logo);
+                  box.addView(sub);
+
+                  setContentView(box);
+
+                  new Handler().postDelayed(this::home, 1800);
+              }
+
+              void initializeDemoData() {
+                  prefs.edit()
+                      .putBoolean("initialized", true)
+                      .putInt("caseCount", 2)
+                      .putString("case1",
+                          "MCV-001|Sample Child|12|Angeles City|" +
+                          "Wearing blue shirt. Last seen near the public market.|ACTIVE")
+                      .putString("case2",
+                          "MCV-002|Sample Vulnerable Person|65|Mabalacat City|" +
+                          "Last seen near the transport terminal.|ACTIVE")
+                      .putInt("sightingCount", 0)
+                      .putInt("alertCount", 2)
+                      .apply();
+              }
+
+              TextView title(String text) {
                   TextView t = new TextView(this);
-                  t.setText(s);
-                  t.setTextSize(size);
-                  t.setTextColor(color);
-                  t.setPadding(0,8,0,8);
+                  t.setText(text);
+                  t.setTextSize(28);
+                  t.setTextColor(BLUE);
+                  t.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+                  t.setGravity(Gravity.CENTER);
+                  t.setPadding(10, 20, 10, 20);
                   return t;
               }
 
-              TextView title(String s) {
-                  TextView t = txt(s,25,TEXT);
-                  t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
+              TextView subtitle(String text) {
+                  TextView t = new TextView(this);
+                  t.setText(text);
+                  t.setTextSize(15);
+                  t.setTextColor(Color.DKGRAY);
+                  t.setGravity(Gravity.CENTER);
+                  t.setPadding(15, 0, 15, 18);
                   return t;
               }
 
-              Button button(String s) {
+              Button button(String text) {
                   Button b = new Button(this);
-                  b.setText(s);
-                  b.setAllCaps(false);
+                  b.setText(text);
                   b.setTextSize(16);
-                  b.setTextColor(TEXT);
-                  b.setMinHeight(58);
+                  b.setAllCaps(false);
+                  b.setPadding(12, 12, 12, 12);
 
-                  GradientDrawable g = new GradientDrawable();
-                  g.setColor(Color.WHITE);
-                  g.setCornerRadius(18);
-                  b.setBackground(g);
+                  LinearLayout.LayoutParams p =
+                      new LinearLayout.LayoutParams(
+                          LinearLayout.LayoutParams.MATCH_PARENT,
+                          LinearLayout.LayoutParams.WRAP_CONTENT);
+
+                  p.setMargins(0, 7, 0, 7);
+                  b.setLayoutParams(p);
 
                   return b;
               }
@@ -234,715 +282,548 @@ jobs:
                   EditText e = new EditText(this);
                   e.setHint(hint);
                   e.setTextSize(16);
-                  e.setPadding(18,5,18,5);
-
-                  GradientDrawable g = new GradientDrawable();
-                  g.setColor(Color.WHITE);
-                  g.setCornerRadius(15);
-                  g.setStroke(1,Color.rgb(220,225,235));
-                  e.setBackground(g);
+                  e.setPadding(20, 12, 20, 12);
 
                   LinearLayout.LayoutParams p =
-                      new LinearLayout.LayoutParams(-1,58);
+                      new LinearLayout.LayoutParams(
+                          LinearLayout.LayoutParams.MATCH_PARENT,
+                          LinearLayout.LayoutParams.WRAP_CONTENT);
 
-                  p.setMargins(0,6,0,8);
+                  p.setMargins(0, 5, 0, 5);
                   e.setLayoutParams(p);
 
                   return e;
               }
 
-              void cover() {
-                  LinearLayout l = new LinearLayout(this);
-                  l.setOrientation(LinearLayout.VERTICAL);
-                  l.setGravity(Gravity.CENTER);
-                  l.setPadding(30,30,30,30);
-                  l.setBackgroundColor(NAVY);
-
-                  TextView a = txt("MCVPAS",45,Color.WHITE);
-                  a.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-                  a.setGravity(Gravity.CENTER);
-
-                  TextView b = txt(
-                      "Smart Missing Child and Vulnerable Person Alert System",
-                      17,Color.rgb(225,232,255));
-
-                  b.setGravity(Gravity.CENTER);
-
-                  TextView c = txt(
-                      "REPORT • ALERT • SIGHT • RESPOND",
-                      13,Color.rgb(190,205,245));
-
-                  c.setGravity(Gravity.CENTER);
-
-                  l.addView(a);
-                  l.addView(b);
-                  l.addView(c);
-
-                  setContentView(l);
-
-                  new Handler().postDelayed(
-                      () -> home(),1600);
-              }
-
-              void base(String name) {
-                  LinearLayout root = new LinearLayout(this);
+              void base(String pageTitle) {
+                  root = new LinearLayout(this);
                   root.setOrientation(LinearLayout.VERTICAL);
-                  root.setBackgroundColor(BG);
-
-                  LinearLayout bar = new LinearLayout(this);
-                  bar.setGravity(Gravity.CENTER_VERTICAL);
-                  bar.setPadding(18,0,18,0);
-                  bar.setBackgroundColor(NAVY);
-
-                  TextView brand = txt("MCVPAS",20,Color.WHITE);
-                  brand.setTypeface(Typeface.DEFAULT,Typeface.BOLD);
-
-                  bar.addView(brand,
-                      new LinearLayout.LayoutParams(0,62,1));
-
-                  bar.addView(txt(name,14,Color.WHITE));
-
-                  root.addView(bar,
-                      new LinearLayout.LayoutParams(-1,62));
+                  root.setPadding(22, 10, 22, 20);
+                  root.setBackgroundColor(Color.rgb(248, 249, 252));
 
                   ScrollView scroll = new ScrollView(this);
+                  scroll.addView(root);
 
-                  content = new LinearLayout(this);
-                  content.setOrientation(LinearLayout.VERTICAL);
-                  content.setPadding(20,20,20,30);
+                  setContentView(scroll);
 
-                  scroll.addView(content);
-
-                  root.addView(scroll,
-                      new LinearLayout.LayoutParams(-1,0,1));
-
-                  setContentView(root);
+                  root.addView(title(pageTitle));
               }
 
               void home() {
-                  base("Home");
+                  base("MCVPAS");
 
-                  content.addView(title("Community Safety Dashboard"));
+                  root.addView(subtitle(
+                      "Smart Missing Child and Vulnerable Person Alert System"
+                  ));
 
-                  content.addView(txt(
-                      "Functional research prototype for reporting, " +
-                      "monitoring and responding to missing-person cases.",
-                      15,MUTED));
+                  TextView status = new TextView(this);
+                  status.setText(
+                      "SYSTEM STATUS: ONLINE\n" +
+                      "Community Alert and Case Monitoring"
+                  );
+                  status.setTextSize(15);
+                  status.setTextColor(Color.rgb(20, 110, 60));
+                  status.setGravity(Gravity.CENTER);
+                  status.setPadding(10, 5, 10, 15);
+                  root.addView(status);
 
-                  Button report =
-                      button("🚨  Report Missing Person");
-
+                  Button report = button("🚨  Report Missing Person");
                   report.setOnClickListener(v -> report());
+                  root.addView(report);
 
-                  content.addView(report);
-
-                  Button cases =
-                      button("📋  View Active Cases");
-
+                  Button cases = button("📋  View Active Cases");
                   cases.setOnClickListener(v -> cases());
+                  root.addView(cases);
 
-                  content.addView(cases);
+                  Button sighting = button("📍  Submit a Sighting");
+                  sighting.setOnClickListener(v -> sighting());
+                  root.addView(sighting);
 
-                  Button sight =
-                      button("📍  Submit a Sighting");
-
-                  sight.setOnClickListener(v -> sighting());
-
-                  content.addView(sight);
-
-                  Button alerts =
-                      button("🔔  Alerts");
-
+                  Button alerts = button("🔔  Alerts");
                   alerts.setOnClickListener(v -> alerts());
+                  root.addView(alerts);
 
-                  content.addView(alerts);
+                  Button photo = button("📷  Photo Matching Demo");
+                  photo.setOnClickListener(v -> photoMatching());
+                  root.addView(photo);
 
-                  Button photo =
-                      button("🖼️  Photo Matching Demonstration");
-
-                  photo.setOnClickListener(v -> photo());
-
-                  content.addView(photo);
-
-                  Button admin =
-                      button("🔐  Admin Dashboard");
-
+                  Button admin = button("🔐  Admin Dashboard");
                   admin.setOnClickListener(v -> admin());
+                  root.addView(admin);
 
-                  content.addView(admin);
-
-                  Button demo =
-                      button("🎬  Load Defense Sample Data");
-
-                  demo.setOnClickListener(v -> demo());
-
-                  content.addView(demo);
-
-                  Button about =
-                      button("ℹ️  About System");
-
-                  about.setOnClickListener(v -> about());
-
-                  content.addView(about);
+                  TextView demo = new TextView(this);
+                  demo.setText(
+                      "\nDEFENSE DEMO\n" +
+                      "Sample data is included for demonstration."
+                  );
+                  demo.setTextSize(13);
+                  demo.setTextColor(Color.GRAY);
+                  demo.setGravity(Gravity.CENTER);
+                  root.addView(demo);
               }
-
               void report() {
                   base("Report Missing Person");
 
-                  content.addView(title("New Missing-Person Report"));
-
-                  content.addView(txt(
-                      "Use fictional information for classroom demonstration.",
-                      13,MUTED));
+                  root.addView(subtitle(
+                      "Enter the information needed to create a missing-person case."
+                  ));
 
                   EditText name = field("Full Name");
                   EditText age = field("Age");
+                  EditText location = field("Last Known Location");
+                  EditText description = field("Description / Clothing / Other Details");
 
-                  locationField =
-                      field("Last Known Location");
+                  root.addView(name);
+                  root.addView(age);
+                  root.addView(location);
+                  root.addView(description);
 
-                  EditText details =
-                      field("Description");
+                  Button submit = button("🚨 Submit Missing Person Report");
 
-                  Button gps =
-                      button("📍  Use Current Location");
+                  submit.setOnClickListener(v -> {
 
-                  gps.setOnClickListener(v -> location());
+                      if (name.getText().toString().trim().isEmpty() ||
+                          age.getText().toString().trim().isEmpty() ||
+                          location.getText().toString().trim().isEmpty()) {
 
-                  Button save =
-                      button("🚨  Submit Report");
-
-                  save.setOnClickListener(v -> {
-
-                      String n =
-                          name.getText().toString().trim();
-
-                      String loc =
-                          locationField.getText().toString().trim();
-
-                      if(n.isEmpty() || loc.isEmpty()) {
                           Toast.makeText(
                               this,
-                              "Name and location are required.",
-                              Toast.LENGTH_LONG).show();
+                              "Please complete the required fields.",
+                              Toast.LENGTH_LONG
+                          ).show();
+
                           return;
                       }
 
-                      int count =
-                          db.getInt("cases",0)+1;
+                      int count = prefs.getInt("caseCount", 0) + 1;
 
-                      String id =
-                          String.format(
-                              Locale.US,
-                              "CASE-%03d",
-                              count);
+                      String caseId = String.format(
+                          Locale.US,
+                          "MCV-%03d",
+                          count
+                      );
 
-                      String record =
-                          id+"|"+
-                          n+"|"+
-                          age.getText().toString()+"|"+
-                          loc+"|"+
-                          details.getText().toString()+"|"+
-                          new SimpleDateFormat(
-                              "yyyy-MM-dd HH:mm",
-                              Locale.US).format(new Date());
+                      String data =
+                          caseId + "|" +
+                          name.getText().toString().trim() + "|" +
+                          age.getText().toString().trim() + "|" +
+                          location.getText().toString().trim() + "|" +
+                          description.getText().toString().trim() + "|ACTIVE";
 
-                      db.edit()
-                          .putInt("cases",count)
-                          .putString(
-                              "case_"+count,
-                              record)
+                      prefs.edit()
+                          .putInt("caseCount", count)
+                          .putString("case" + count, data)
+                          .putInt(
+                              "alertCount",
+                              prefs.getInt("alertCount", 0) + 1
+                          )
                           .apply();
 
                       Toast.makeText(
                           this,
-                          id+" saved successfully!",
-                          Toast.LENGTH_LONG).show();
+                          "Report submitted successfully!\nCase ID: " + caseId,
+                          Toast.LENGTH_LONG
+                      ).show();
 
                       cases();
                   });
 
-                  content.addView(name);
-                  content.addView(age);
-                  content.addView(locationField);
-                  content.addView(details);
-                  content.addView(gps);
-                  content.addView(save);
+                  root.addView(submit);
 
-                  Button back =
-                      button("← Back to Home");
-
+                  Button back = button("← Back to Home");
                   back.setOnClickListener(v -> home());
-
-                  content.addView(back);
+                  root.addView(back);
               }
 
               void cases() {
                   base("Active Cases");
 
-                  content.addView(title("Active Cases"));
+                  int count = prefs.getInt("caseCount", 0);
 
-                  int n =
-                      db.getInt("cases",0);
+                  TextView countText = new TextView(this);
+                  countText.setText(
+                      "Total Registered Cases: " + count
+                  );
+                  countText.setTextSize(16);
+                  countText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+                  countText.setPadding(5, 5, 5, 15);
+                  root.addView(countText);
 
-                  if(n==0) {
-                      content.addView(txt(
-                          "No active cases. " +
-                          "Use Load Defense Sample Data.",
-                          16,MUTED));
-                  }
+                  for (int i = 1; i <= count; i++) {
 
-                  for(int i=n;i>=1;i--) {
+                      String data = prefs.getString("case" + i, "");
 
-                      String r =
-                          db.getString(
-                              "case_"+i,"");
-
-                      String[] p =
-                          r.split("\\|",-1);
-
-                      if(p.length>=6) {
-
-                          TextView card =
-                              txt(
-                                  p[0]+"\n"+
-                                  p[1]+" • Age: "+p[2]+"\n"+
-                                  "📍 "+p[3]+"\n"+
-                                  "STATUS: ACTIVE",
-                                  17,TEXT);
-
-                          content.addView(card);
-
-                          Button view =
-                              button(
-                                  "View "+p[0]);
-
-                          view.setOnClickListener(
-                              v -> detail(r));
-
-                          content.addView(view);
+                      if (data.isEmpty()) {
+                          continue;
                       }
+
+                      String[] parts = data.split("\\|", -1);
+
+                      if (parts.length < 6) {
+                          continue;
+                      }
+
+                      LinearLayout card = new LinearLayout(this);
+                      card.setOrientation(LinearLayout.VERTICAL);
+                      card.setPadding(18, 15, 18, 15);
+                      card.setBackgroundColor(Color.WHITE);
+
+                      TextView caseText = new TextView(this);
+
+                      caseText.setText(
+                          "CASE ID: " + parts[0] + "\n\n" +
+                          "Name: " + parts[1] + "\n" +
+                          "Age: " + parts[2] + "\n" +
+                          "Last Known Location: " + parts[3] + "\n\n" +
+                          "Description:\n" + parts[4] + "\n\n" +
+                          "STATUS: " + parts[5]
+                      );
+
+                      caseText.setTextSize(16);
+                      caseText.setTextColor(DARK);
+
+                      card.addView(caseText);
+
+                      Button sight = button("📍 Submit Sighting for " + parts[0]);
+
+                      final String selectedCase = parts[0];
+
+                      sight.setOnClickListener(
+                          v -> sightingForCase(selectedCase)
+                      );
+
+                      card.addView(sight);
+
+                      root.addView(card);
+
+                      Space space = new Space(this);
+
+                      root.addView(
+                          space,
+                          new LinearLayout.LayoutParams(
+                              LinearLayout.LayoutParams.MATCH_PARENT,
+                              15
+                          )
+                      );
                   }
 
-                  Button back =
-                      button("← Back to Home");
-
-                  back.setOnClickListener(
-                      v -> home());
-
-                  content.addView(back);
-              }
-
-              void detail(String r) {
-                  base("Case Details");
-
-                  String[] p =
-                      r.split("\\|",-1);
-
-                  content.addView(
-                      title(p[0]));
-
-                  content.addView(
-                      txt(
-                          "PERSON: "+p[1]+"\n\n"+
-                          "AGE: "+p[2]+"\n\n"+
-                          "LAST KNOWN LOCATION: "+p[3]+
-                          "\n\nDESCRIPTION: "+p[4]+
-                          "\n\nREPORTED: "+p[5]+
-                          "\n\nSTATUS: ACTIVE",
-                          17,TEXT));
-
-                  Button s =
-                      button(
-                          "📍 Submit Sighting");
-
-                  s.setOnClickListener(
-                      v -> sighting());
-
-                  content.addView(s);
-
-                  Button back =
-                      button("← Back");
-
-                  back.setOnClickListener(
-                      v -> cases());
-
-                  content.addView(back);
+                  Button back = button("← Back to Home");
+                  back.setOnClickListener(v -> home());
+                  root.addView(back);
               }
 
               void sighting() {
-                  base("Submit Sighting");
+                  base("Submit a Sighting");
 
-                  content.addView(
-                      title("Community Sighting"));
+                  root.addView(subtitle(
+                      "Submit information if you have seen a person connected to an active case."
+                  ));
 
-                  EditText id =
-                      field("Case Number");
+                  EditText caseId = field("Case Number (example: MCV-001)");
+                  EditText location = field("Sighting Location");
+                  EditText details = field("What did you see?");
+                  EditText reporter = field("Your Name / Reporter");
 
-                  EditText loc =
-                      field("Sighting Location");
+                  root.addView(caseId);
+                  root.addView(location);
+                  root.addView(details);
+                  root.addView(reporter);
 
-                  EditText details =
-                      field("What did you observe?");
+                  Button submit = button("📍 Submit Sighting");
 
-                  Button save =
-                      button("📤  Submit Sighting");
+                  submit.setOnClickListener(v -> {
 
-                  save.setOnClickListener(v -> {
-
-                      if(id.getText().toString()
-                          .trim().isEmpty() ||
-                         loc.getText().toString()
-                          .trim().isEmpty()) {
+                      if (caseId.getText().toString().trim().isEmpty() ||
+                          location.getText().toString().trim().isEmpty() ||
+                          details.getText().toString().trim().isEmpty()) {
 
                           Toast.makeText(
                               this,
-                              "Case number and location required.",
-                              Toast.LENGTH_LONG).show();
+                              "Please complete the required fields.",
+                              Toast.LENGTH_LONG
+                          ).show();
 
                           return;
                       }
 
-                      int count =
-                          db.getInt("sightings",0)+1;
-
-                      db.edit()
-                          .putInt("sightings",count)
-                          .putString(
-                              "sighting_"+count,
-                              id.getText().toString()+
-                              "|"+
-                              loc.getText().toString()+
-                              "|"+
-                              details.getText().toString())
-                          .apply();
-
-                      Toast.makeText(
-                          this,
-                          "Sighting submitted!",
-                          Toast.LENGTH_LONG).show();
-
-                      home();
+                      saveSighting(
+                          caseId.getText().toString().trim(),
+                          location.getText().toString().trim(),
+                          details.getText().toString().trim(),
+                          reporter.getText().toString().trim()
+                      );
                   });
 
-                  content.addView(id);
-                  content.addView(loc);
-                  content.addView(details);
-                  content.addView(save);
+                  root.addView(submit);
 
-                  Button back =
-                      button("← Back");
+                  Button back = button("← Back to Home");
+                  back.setOnClickListener(v -> home());
+                  root.addView(back);
+              }
 
-                  back.setOnClickListener(
-                      v -> home());
+              void sightingForCase(String caseId) {
+                  base("Submit Sighting");
 
-                  content.addView(back);
+                  TextView selected = new TextView(this);
+
+                  selected.setText(
+                      "Selected Case: " + caseId
+                  );
+
+                  selected.setTextSize(18);
+                  selected.setTextColor(BLUE);
+                  selected.setTypeface(
+                      Typeface.DEFAULT,
+                      Typeface.BOLD
+                  );
+                  selected.setPadding(5, 5, 5, 15);
+
+                  root.addView(selected);
+
+                  EditText location = field("Sighting Location");
+                  EditText details = field("What did you see?");
+                  EditText reporter = field("Your Name / Reporter");
+
+                  root.addView(location);
+                  root.addView(details);
+                  root.addView(reporter);
+
+                  Button submit = button("📍 Submit Sighting");
+
+                  submit.setOnClickListener(v -> {
+
+                      if (location.getText().toString().trim().isEmpty() ||
+                          details.getText().toString().trim().isEmpty()) {
+
+                          Toast.makeText(
+                              this,
+                              "Please complete the required fields.",
+                              Toast.LENGTH_LONG
+                          ).show();
+
+                          return;
+                      }
+
+                      saveSighting(
+                          caseId,
+                          location.getText().toString().trim(),
+                          details.getText().toString().trim(),
+                          reporter.getText().toString().trim()
+                      );
+                  });
+
+                  root.addView(submit);
+
+                  Button back = button("← Back to Cases");
+                  back.setOnClickListener(v -> cases());
+                  root.addView(back);
+              }
+
+              void saveSighting(
+                  String caseId,
+                  String location,
+                  String details,
+                  String reporter
+              ) {
+
+                  int count =
+                      prefs.getInt("sightingCount", 0) + 1;
+
+                  String date =
+                      new SimpleDateFormat(
+                          "MMM dd, yyyy HH:mm",
+                          Locale.US
+                      ).format(new Date());
+
+                  String sighting =
+                      "SIGHT-" +
+                      String.format(Locale.US, "%03d", count) +
+                      "|" +
+                      caseId +
+                      "|" +
+                      location +
+                      "|" +
+                      details +
+                      "|" +
+                      reporter +
+                      "|" +
+                      date;
+
+                  prefs.edit()
+                      .putInt("sightingCount", count)
+                      .putString(
+                          "sighting" + count,
+                          sighting
+                      )
+                      .putInt(
+                          "alertCount",
+                          prefs.getInt("alertCount", 0) + 1
+                      )
+                      .apply();
+
+                  Toast.makeText(
+                      this,
+                      "Sighting submitted successfully!\n" +
+                      "Authorities can review this report.",
+                      Toast.LENGTH_LONG
+                  ).show();
+
+                  home();
               }
 
               void alerts() {
                   base("Alerts");
 
-                  content.addView(
-                      title("Community Alerts"));
+                  int alertCount =
+                      prefs.getInt("alertCount", 0);
 
-                  int n =
-                      db.getInt("cases",0);
+                  TextView heading = new TextView(this);
 
-                  if(n==0) {
-                      content.addView(
-                          txt(
-                              "No active alerts.",
-                              16,MUTED));
+                  heading.setText(
+                      "🔔 Current System Alerts"
+                  );
+
+                  heading.setTextSize(20);
+                  heading.setTypeface(
+                      Typeface.DEFAULT,
+                      Typeface.BOLD
+                  );
+                  heading.setTextColor(RED);
+                  heading.setPadding(5, 5, 5, 15);
+
+                  root.addView(heading);
+
+                  if (alertCount == 0) {
+
+                      TextView empty = new TextView(this);
+
+                      empty.setText(
+                          "No alerts at this time."
+                      );
+
+                      empty.setTextSize(17);
+                      root.addView(empty);
+
+                  } else {
+
+                      TextView alert = new TextView(this);
+
+                      alert.setText(
+                          "ACTIVE ALERTS\n\n" +
+                          "There are " +
+                          alertCount +
+                          " recorded system alert(s).\n\n" +
+                          "Please check Active Cases and review " +
+                          "recent sightings for important information."
+                      );
+
+                      alert.setTextSize(17);
+                      alert.setTextColor(DARK);
+                      alert.setPadding(5, 5, 5, 20);
+
+                      root.addView(alert);
                   }
 
-                  for(int i=n;i>=1;i--) {
+                  Button viewCases =
+                      button("📋 View Active Cases");
 
-                      String r =
-                          db.getString(
-                              "case_"+i,"");
+                  viewCases.setOnClickListener(
+                      v -> cases()
+                  );
 
-                      String[] p =
-                          r.split("\\|",-1);
-
-                      if(p.length>=4) {
-                          content.addView(
-                              txt(
-                                  "🚨 "+p[0]+"\n"+
-                                  p[1]+"\n"+
-                                  "📍 "+p[3]+"\n"+
-                                  "STATUS: ACTIVE",
-                                  17,TEXT));
-                      }
-                  }
+                  root.addView(viewCases);
 
                   Button back =
                       button("← Back to Home");
 
                   back.setOnClickListener(
-                      v -> home());
+                      v -> home()
+                  );
 
-                  content.addView(back);
+                  root.addView(back);
               }
 
-              void photo() {
-                  base("Photo Matching");
+              void photoMatching() {
+                  base("Photo Matching Demo");
 
-                  content.addView(
-                      title("Photo Matching Demonstration"));
+                  root.addView(subtitle(
+                      "Demonstration module for the proposed AI-assisted "
+                      + "photo matching feature."
+                  ));
 
-                  content.addView(
-                      txt(
-                          "This prototype demonstrates photo selection. " +
-                          "It does not claim validated facial-recognition accuracy.",
-                          15,MUTED));
+                  TextView explanation = new TextView(this);
 
-                  Button select =
-                      button("🖼️  Select Reference Photo");
+                  explanation.setText(
+                      "AI-ASSISTED PHOTO MATCHING\n\n" +
+                      "This defense demonstration simulates the "
+                      + "photo-matching workflow using sample data.\n\n" +
+                      "Step 1: Select a sample case.\n" +
+                      "Step 2: Start the matching process.\n" +
+                      "Step 3: The system displays a simulated "
+                      + "matching result.\n\n" +
+                      "Note: This prototype demonstrates the workflow "
+                      + "and interface. It does not claim to perform "
+                      + "real-world biometric identification."
+                  );
 
-                  select.setOnClickListener(v -> {
+                  explanation.setTextSize(16);
+                  explanation.setTextColor(DARK);
+                  explanation.setPadding(5, 5, 5, 20);
 
-                      Intent i =
-                          new Intent(
-                              Intent.ACTION_OPEN_DOCUMENT);
+                  root.addView(explanation);
 
-                      i.setType("image/*");
+                  Button sample1 =
+                      button("📷 Test Sample Case MCV-001");
 
-                      i.addCategory(
-                          Intent.CATEGORY_OPENABLE);
+                  sample1.setOnClickListener(
+                      v -> runPhotoDemo("MCV-001")
+                  );
 
-                      startActivityForResult(i,100);
-                  });
+                  root.addView(sample1);
 
-                  content.addView(select);
+                  Button sample2 =
+                      button("📷 Test Sample Case MCV-002");
+
+                  sample2.setOnClickListener(
+                      v -> runPhotoDemo("MCV-002")
+                  );
+
+                  root.addView(sample2);
 
                   Button back =
                       button("← Back to Home");
 
                   back.setOnClickListener(
-                      v -> home());
+                      v -> home()
+                  );
 
-                  content.addView(back);
+                  root.addView(back);
               }
 
-              void admin() {
-                  base("Admin Login");
-
-                  content.addView(
-                      title("Admin Login"));
-
-                  EditText user =
-                      field("Username");
-
-                  EditText pass =
-                      field("Password");
-
-                  pass.setInputType(129);
-
-                  Button login =
-                      button("🔐  Login");
-
-                  login.setOnClickListener(v -> {
-
-                      if(user.getText().toString()
-                          .equals("admin") &&
-                         pass.getText().toString()
-                          .equals("mcvpas123")) {
-
-                          dashboard();
-
-                      } else {
-
-                          Toast.makeText(
-                              this,
-                              "Invalid login.",
-                              Toast.LENGTH_LONG).show();
-                      }
-                  });
-
-                  content.addView(user);
-                  content.addView(pass);
-                  content.addView(login);
-
-                  content.addView(
-                      txt(
-                          "Demo account: admin / mcvpas123",
-                          13,MUTED));
-              }
-
-              void dashboard() {
-                  base("Admin Dashboard");
-
-                  content.addView(
-                      title("Admin Dashboard"));
-
-                  int cases =
-                      db.getInt("cases",0);
-
-                  int sightings =
-                      db.getInt("sightings",0);
-
-                  content.addView(
-                      txt(
-                          "● SYSTEM STATUS: ONLINE\n\n"+
-                          "Active Cases: "+cases+"\n"+
-                          "Sightings: "+sightings+
-                          "\n\nLocal Research Demo Storage",
-                          17,TEXT));
-
-                  Button clear =
-                      button("⚠️  Clear Demo Data");
-
-                  clear.setOnClickListener(v -> {
-
-                      db.edit().clear().apply();
-
-                      Toast.makeText(
-                          this,
-                          "Demo data cleared.",
-                          Toast.LENGTH_LONG).show();
-
-                      dashboard();
-                  });
-
-                  content.addView(clear);
-
-                  Button logout =
-                      button("Logout");
-
-                  logout.setOnClickListener(
-                      v -> home());
-
-                  content.addView(logout);
-              }
-
-              void demo() {
-
-                  db.edit()
-                      .putInt("cases",2)
-                      .putString(
-                          "case_1",
-                          "CASE-001|Alex Rivera|12|"+
-                          "Angeles City Public Market|"+
-                          "Fictional defense record.|"+
-                          "2026-08-16 09:00")
-                      .putString(
-                          "case_2",
-                          "CASE-002|Jamie Santos|67|"+
-                          "Balibago, Angeles City|"+
-                          "Fictional defense record.|"+
-                          "2026-08-16 09:15")
-                      .putInt("sightings",1)
-                      .apply();
+              void runPhotoDemo(String caseId) {
 
                   Toast.makeText(
                       this,
-                      "Defense sample data loaded!",
-                      Toast.LENGTH_LONG).show();
+                      "Analyzing sample photo...",
+                      Toast.LENGTH_LONG
+                  ).show();
 
-                  home();
+                  new Handler().postDelayed(() -> {
+
+                      new AlertDialog.Builder(this)
+                          .setTitle("Photo Matching Result")
+                          .setMessage(
+                              "Sample Case: " + caseId + "\n\n" +
+                              "Result: DEMO MATCH FOUND\n\n" +
+                              "Confidence: 94%\n\n" +
+                              "This result is simulated for research "
+                              + "prototype demonstration."
+                          )
+                          .setPositiveButton(
+                              "OK",
+                              null
+                          )
+                          .show();
+
+                  }, 1500);
               }
-
-              void about() {
-                  base("About");
-
-                  content.addView(
-                      title("MCVPAS"));
-
-                  content.addView(
-                      txt(
-                          "Smart Missing Child and Vulnerable Person Alert System\n\n"+
-                          "Functional research prototype demonstrating:\n\n"+
-                          "• Missing-person reporting\n"+
-                          "• Case management\n"+
-                          "• Community sightings\n"+
-                          "• Alerts\n"+
-                          "• Photo selection\n"+
-                          "• Admin monitoring\n"+
-                          "• Defense sample data",
-                          16,TEXT));
-
-                  Button back =
-                      button("← Back to Home");
-
-                  back.setOnClickListener(
-                      v -> home());
-
-                  content.addView(back);
-              }
-
-              void location() {
-
-                  if(checkSelfPermission(
-                      Manifest.permission.ACCESS_FINE_LOCATION)
-                      != PackageManager.PERMISSION_GRANTED) {
-
-                      requestPermissions(
-                          new String[]{
-                              Manifest.permission.ACCESS_FINE_LOCATION,
-                              Manifest.permission.ACCESS_COARSE_LOCATION
-                          },200);
-
-                      Toast.makeText(
-                          this,
-                          "Allow location permission, then try again.",
-                          Toast.LENGTH_LONG).show();
-
-                      return;
-                  }
-
-                  try {
-
-                      Location l =
-                          locationManager.getLastKnownLocation(
-                              LocationManager.GPS_PROVIDER);
-
-                      if(l == null) {
-                          l =
-                              locationManager.getLastKnownLocation(
-                                  LocationManager.NETWORK_PROVIDER);
-                      }
-
-                      if(l != null && locationField != null) {
-
-                          locationField.setText(
-                              String.format(
-                                  Locale.US,
-                                  "%.6f, %.6f",
-                                  l.getLatitude(),
-                                  l.getLongitude()));
-
-                      } else {
-
-                          Toast.makeText(
-                              this,
-                              "No recent location found.",
-                              Toast.LENGTH_LONG).show();
-                      }
-
-                  } catch(Exception e) {
-
-                      Toast.makeText(
-                          this,
-                          "Location unavailable.",
-                          Toast.LENGTH_LONG).show();
-                  }
-              }
-          }
-          EOF
-
-      - name: Build APK
-        uses: gradle/gradle-build-action@v3
-        with:
-          arguments: clean assembleDebug
-
-      - name: Verify APK
-        run: |
-          ls -lh app/build/outputs/apk/debug/
-          test -f app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: MCVPAS-Final-Defense-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-  
